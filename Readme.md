@@ -3,7 +3,8 @@ This repor demostrate how to use AWS CDK with TypeScript to deploy PySpark Lambd
 
 ## Implementing PySpark Lambda with CDK
 
-Here's how you can set up a PySpark Lambda function using CDK with TypeScript:
+Set up a PySpark Lambda function using CDK with TypeScript:
+
 ``` typescript
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -54,3 +55,77 @@ export class PySparkLambdaStack extends cdk.Stack {
 }
 
 ```
+
+### Creating the PySpark Layer
+For the PySpark layer, you'll need to prepare a directory structure with all the required dependencies:
+
+```
+Create a layers/pyspark/python directory structure
+Install PySpark and its dependencies in that directory:
+```
+
+### Sample PySpark Lambda Handler
+
+``` python
+import os
+from pyspark.sql import SparkSession
+
+def handler(event, context):
+    # Initialize Spark session
+    spark = SparkSession.builder \
+        .appName("PySparkLambda") \
+        .config("spark.executor.memory", "512m") \
+        .config("spark.driver.memory", "512m") \
+        .config("spark.python.worker.memory", "512m") \
+        .master("local[*]") \
+        .getOrCreate()
+    
+    # Create a simple DataFrame
+    data = [("Alice", 34), ("Bob", 45), ("Charlie", 29)]
+    df = spark.createDataFrame(data, ["Name", "Age"])
+    
+    # Perform some operations
+    result = df.select("Name", "Age").collect()
+    
+    # Stop the Spark session
+    spark.stop()
+    
+    # Return the results
+    return {
+        'statusCode': 200,
+        'body': str(result)
+    }
+
+```
+
+For more complex scenarios, you can extend your CDK code to include:
+
+``` typescript
+// Add VPC configuration if needed
+const pysparkFunction = new lambda.Function(this, 'PySparkFunction', {
+  // ... other properties
+  vpc: vpc,
+  vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+  
+  // Increase ephemeral storage for PySpark processing
+  ephemeralStorageSize: cdk.Size.mebibytes(10240),
+  
+  // Add architecture specification
+  architecture: lambda.Architecture.X86_64,
+});
+
+// Add event sources if needed
+pysparkFunction.addEventSource(new SomeEventSource(...));
+
+```
+
+### To deploy your CDK stack:
+
+npm run build   # Compile TypeScript to JavaScript
+cdk deploy      # Deploy the stack to AWS
+
+
+refer more here:
+
+https://docs.aws.amazon.com/lambda/latest/dg/typescript-package.html#aws-cdk-ts
+
